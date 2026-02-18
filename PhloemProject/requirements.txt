@@ -1,0 +1,6 @@
+pyserial
+requests
+pyyaml
+streamlit
+watchdog
+pandas
