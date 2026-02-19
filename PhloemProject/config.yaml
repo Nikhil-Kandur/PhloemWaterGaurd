@@ -6,6 +6,7 @@ thresholds:
   leak_variance: 0.5         # Variance limit for leak detection
   night_start: 23            # 11 PM
   night_end: 5               # 5 AM
+  night_pump_speed: 50       # As a percent
 
 telegram:
   bot_token: "8503985725:AAHhCLZmMqEfTreaJSGLLQonPFk11goCkYc"  # Paste your token from BotFather

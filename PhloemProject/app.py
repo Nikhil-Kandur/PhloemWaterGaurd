@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from modules.data_source import DataSource
 from modules.notifier import TelegramNotifier
 import os
+#cd PhloemProject
+#streamlit run app.py
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Phloem WaterGuard Dashboard", layout="wide", page_icon="💧")
@@ -33,6 +35,8 @@ if 'total_leak_vol' not in st.session_state: st.session_state.total_leak_vol = 0
 if 'night_violation_count' not in st.session_state: st.session_state.night_violation_count = 0
 if 'is_running' not in st.session_state: st.session_state.is_running = False
 if 'last_security_state' not in st.session_state: st.session_state.last_security_state = "ARMED"
+if 'current_pump_speed' not in st.session_state:
+    st.session_state.current_pump_speed = 100
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.title("🔧 Controls")
@@ -157,15 +161,28 @@ if st.session_state.is_running:
 
         # C. Logic
         violation_type = "NONE"
-
+        is_night = False
         if is_armed:
-            is_night = False
+
             if night_start == night_end:
                 is_night = True
             elif night_start > night_end:
                 if curr_hour >= night_start or curr_hour < night_end: is_night = True
             else:
                 if night_start <= curr_hour < night_end: is_night = True
+
+        # --- DEMAND-BASED PUMP CONTROL ---
+        # Target speed is 100% during day, and the config value during night
+        eco_speed = config['thresholds'].get('night_pump_speed', 50)
+        target_speed = eco_speed if is_night else 100
+
+        # Only send command if the speed needs to change
+        if st.session_state.current_pump_speed != target_speed:
+            st.session_state.source.send_command(f"SET_SPEED:{target_speed}")
+            st.session_state.current_pump_speed = target_speed
+            mode_name = "Night (ECO)" if is_night else "Day (NORMAL)"
+            st.toast(f"🔋 Demand-Based Adjust: Pump speed set to {target_speed}% [{mode_name}]")
+
 
             if leak_flag == 1:
                 violation_type = "CRITICAL"
@@ -205,7 +222,12 @@ if st.session_state.is_running:
 
         # F. Update Graphs
         new_row = pd.DataFrame({'Time': [curr_time_str], 'Flow': [flow], 'Level': [level]})
-        st.session_state.history = pd.concat([st.session_state.history, new_row], ignore_index=True).tail(50)
+
+        # FIX: Check if empty before concatenating to avoid Pandas warning
+        if st.session_state.history.empty:
+            st.session_state.history = new_row
+        else:
+            st.session_state.history = pd.concat([st.session_state.history, new_row], ignore_index=True).tail(50)
 
         flow_chart_place.line_chart(st.session_state.history['Flow'])
         level_chart_place.area_chart(st.session_state.history['Level'])
