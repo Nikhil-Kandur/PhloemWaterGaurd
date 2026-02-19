@@ -226,7 +226,7 @@ if st.session_state.is_running:
                 st.session_state.event_log = pd.concat([new_event, st.session_state.event_log], ignore_index=True)
 
         # Update the Table Visuals (Using the placeholder created outside)
-        log_table_placeholder.dataframe(st.session_state.event_log, use_container_width=True)
+        log_table_placeholder.dataframe(st.session_state.event_log, width="stretch")
 
         time.sleep(1.0)
 
